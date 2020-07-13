@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mercury200Hg/metrics-server-prometheus-exporter/exporter"
 	"github.com/mercury200Hg/metrics-server-prometheus-exporter/utils"
 
 	"github.com/rs/zerolog"
@@ -44,12 +45,12 @@ func initWorkers() {
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "<h1>Metrics-Server-Exporter</h1><br><div>Please visit <a href-'/metrics'>/metrics</a> to see metrics </div>")
+	fmt.Fprint(w, "<h1>Metrics-Server-Exporter</h1><br><div>Please visit <a href='/metrics'>/metrics</a> to see metrics </div>")
 }
 
 func logRequestHandler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
 		handler.ServeHTTP(w, r)
 	})
 }
@@ -69,6 +70,13 @@ func main() {
 		log.Error().Msg("Kube config verified successfully.")
 	}
 
+	prometheus.MustRegister(
+		exporter.PodMetricCPU,
+		exporter.PodMetricMemory,
+		exporter.NodeMetricCPU,
+		exporter.NodeMetricMemory,
+	)
+
 	// create a channel with a 100 Job buffer
 	jobsChannel := make(chan *Job, 100)
 
@@ -76,9 +84,9 @@ func main() {
 	go createJobs(jobsChannel)
 	log.Info().Msgf("Starting application on port: 9100")
 	handler := http.NewServeMux()
-	handler.Handle("/", logRequestHandler(http.DefaultServeMux))
+	handler.HandleFunc("/", rootHandler)
 	handler.Handle("/metrics", logRequestHandler(promhttp.Handler()))
-	log.Fatal().Err(http.ListenAndServe(fmt.Sprintf(":%d", 9100), handler))
+	log.Fatal().Err(http.ListenAndServe(fmt.Sprintf(":9100"), handler))
 }
 
 // makeJob creates a new job in channel at rate of given sleep time
@@ -111,7 +119,9 @@ func createJobs(jobs chan<- *Job) {
 		// create jobs
 		for i := 0; i < len(types); i++ {
 			job := makeJob(types[i])
-			inflightCounterVec.WithLabelValues(job.Type).Inc()
+			if i%2 == 0 {
+				inflightCounterVec.WithLabelValues(job.Type).Inc()
+			}
 			jobs <- job
 		}
 		// don't file up queue too quickly
@@ -128,8 +138,10 @@ func startWorker(workerID int, jobs <-chan *Job) {
 		case job := <-jobs:
 			startTime := time.Now()
 			if job.Type == "nodes" {
+				exporter.RecordNodeMetrics()
 				log.Info().Msgf("Scrape count:[%d], Worker:[%d]. Processed job for [%s] in %0.3f seconds", iterations, workerID, job.Type, time.Now().Sub(startTime).Seconds())
 			} else if job.Type == "pods" {
+				exporter.RecordPodMetrics()
 				log.Info().Msgf("Scrape count:[%d], Worker:[%d]. Processed job for [%s] in %0.3f seconds", iterations, workerID, job.Type, time.Now().Sub(startTime).Seconds())
 				// Increase the iteration count
 				iterations++

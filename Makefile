@@ -14,10 +14,10 @@ GOPATH := $(firstword $(subst :, ,$(shell $(GO) env GOPATH)))
 pkgs         = $(shell $(GO) list ./... | grep -v /vendor/)
 PREFIX                  ?= $(shell pwd)
 BIN_DIR                 ?= $(shell pwd)
-DOCKER_IMAGE_NAME  ?= metrics-server-exporter
+DOCKER_IMAGE_NAME  ?= mercury200hg/metrics-server-prometheus-exporter
 DOCKER_IMAGE_TAG ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))
 DOCKERFILE ?= Dockerfile
-all: vendor format build
+all: vendor format build docker
 vendor:
 	@echo ">> Adding vendors"
 	@$(GO) mod vendor
@@ -28,8 +28,10 @@ vet:
 	@echo ">> vetting code"
 	@$(GO) vet $(pkgs)
 build:
-	@echo ">> Building project metrics-server-exporter"
-	@$(GO) get k8s.io/apimachinery@kubernetes-1.17.0
-	@$(GO) get k8s.io/client-go@kubernetes-1.17.0
+	@echo ">> Building project metrics-server-prometheus-exporter"
 	@$(GO) get
 	@$(GO) build
+docker:
+	@echo ">> Building Docker image $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)"
+	@docker build -t $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG) .
+	@docker push $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)

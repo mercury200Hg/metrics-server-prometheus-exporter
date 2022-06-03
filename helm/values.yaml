@@ -1,0 +1,9 @@
+---
+labels: []
+
+replicaCount: 1
+
+image: mercury200hg/metrics-server-prometheus-exporter:1.0.0
+
+service:
+  internalPort: 9100

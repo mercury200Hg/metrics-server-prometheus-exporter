@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "metric-service-exporter.fullname" . }}
+  labels:
+    app: {{ template "metric-service-exporter.name" . }}
+{{ include "labels.standard" . | indent 4 }}
+{{- if .Values.extra_labels }}
+{{ toYaml .Values.extra_labels | indent 4 }}
+{{- end }}
+spec:
+  strategy:
+    type: RollingUpdate
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "metric-service-exporter.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "metric-service-exporter.name" . }}
+        release: {{ .Release.Name }}
+{{ include "labels.standard" . | indent 8 }}
+{{- if .Values.extra_labels }}
+{{ toYaml .Values.extra_labels | indent 8 }}
+{{- end }}
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "9100"
+        prometheus.io/scrape: "true"
+    spec:
+      serviceAccountName: {{ template "metric-service-exporter.fullname" . }}
+      imagePullSecrets:
+        - name: docker-registry-credentials
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ .Values.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: metrics-expt
+              containerPort: {{ .Values.service.internalPort }}
+          resources:
+            limits:
+              cpu: "1"
+              memory: "200Mi"
+            requests:
+              cpu: "0.5"
+              memory: "100Mi"
+          livenessProbe:
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            tcpSocket:
+              port: {{ .Values.service.internalPort }}
+          readinessProbe:
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            httpGet:
+              path: /metrics
+              port: {{ .Values.service.internalPort }}

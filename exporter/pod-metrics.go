@@ -1,6 +1,7 @@
 package exporter
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/mercury200Hg/metrics-server-prometheus-exporter/utils"
@@ -69,7 +70,7 @@ func getPodMetric() PodMetrics {
 	if err != nil {
 		log.Error().Msg(err.Error())
 	} else {
-		result, err := clientset.RESTClient().Get().RequestURI("/apis/metrics.k8s.io/v1beta1/pods").Do().Raw()
+		result, err := clientset.RESTClient().Get().RequestURI("/apis/metrics.k8s.io/v1beta1/pods").Do(context.TODO()).Raw()
 		if err != nil {
 			log.Err(err)
 		} else {

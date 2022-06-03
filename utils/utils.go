@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"regexp"
@@ -35,7 +36,7 @@ func CheckKubeAPI() bool {
 	}
 
 	// check running pods
-	pods, err := clientset.CoreV1().Pods("").List(metav1.ListOptions{})
+	pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
 
 	if err != nil {
 		log.Error().Msg(err.Error())

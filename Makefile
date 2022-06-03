@@ -9,6 +9,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+GOOS ?= linux
+GOARCH ?= amd64
 GO     ?= GO15VENDOREXPERIMENT=1 go
 GOPATH := $(firstword $(subst :, ,$(shell $(GO) env GOPATH)))
 pkgs         = $(shell $(GO) list ./... | grep -v /vendor/)
@@ -30,7 +32,7 @@ vet:
 build:
 	@echo ">> Building project metrics-server-prometheus-exporter"
 	@$(GO) get
-	@$(GO) build
+	@GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build
 docker:
 	@echo ">> Building Docker image $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)"
 	@docker build -t $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG) .
